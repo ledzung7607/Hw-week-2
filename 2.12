@@ -1,0 +1,48 @@
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+rating = ctrl.Antecedent(np.arange(0, 5.1, 0.1), 'rating')
+sales = ctrl.Antecedent(np.arange(0, 1001, 1), 'sales')
+margin = ctrl.Antecedent(np.arange(0, 101, 1), 'margin')
+season = ctrl.Antecedent(np.arange(0, 101, 1), 'season')
+comp_discount = ctrl.Antecedent(np.arange(0, 101, 1), 'comp_discount')
+
+discount = ctrl.Consequent(np.arange(0, 71, 1), 'discount')
+
+rating['thap'] = fuzz.trapmf(rating.universe, [0, 0, 3.5, 4.0])
+rating['tb'] = fuzz.trimf(rating.universe, [3.8, 4.25, 4.6])
+rating['cao'] = fuzz.trapmf(rating.universe, [4.4, 4.8, 5.0, 5.0])
+
+sales.automf(3, names=['thap', 'tb', 'cao'])
+margin.automf(3, names=['thap', 'tb', 'cao'])
+season.automf(3, names=['khong', 'tb', 'cao'])
+comp_discount.automf(3, names=['thap', 'tb', 'cao'])
+
+discount['rat_thap'] = fuzz.trapmf(discount.universe, [0, 0, 2, 5])
+discount['thap'] = fuzz.trapmf(discount.universe, [4, 6, 8, 10])
+discount['tb'] = fuzz.trapmf(discount.universe, [8, 12, 18, 20])
+discount['cao'] = fuzz.trapmf(discount.universe, [18, 25, 35, 40])
+discount['rat_cao'] = fuzz.trapmf(discount.universe, [35, 50, 70, 70])
+
+rules = [
+    ctrl.Rule(rating['cao'] & sales['cao'] & margin['cao'], discount['rat_thap']),
+    ctrl.Rule(rating['thap'] & sales['thap'] & margin['cao'], discount['cao']),
+    ctrl.Rule(season['cao'] & comp_discount['cao'], discount['rat_cao']),
+    ctrl.Rule(rating['tb'] & sales['tb'] & margin['tb'], discount['tb']),
+    ctrl.Rule(comp_discount['thap'] & margin['thap'] & sales['cao'], discount['rat_thap']),
+    ctrl.Rule(rating['thap'] & season['khong'], discount['tb']),
+    ctrl.Rule(sales['thap'] & margin['thap'], discount['rat_cao'])
+]
+
+system = ctrl.ControlSystem(rules)
+sim = ctrl.ControlSystemSimulation(system)
+
+sim.input['rating'] = 4.3
+sim.input['sales'] = 500
+sim.input['margin'] = 20
+sim.input['season'] = 80
+sim.input['comp_discount'] = 80
+
+sim.compute()
+print(f"Chiet khau 2.12: {sim.output['discount']:.2f}%")
