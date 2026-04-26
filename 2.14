@@ -1,0 +1,45 @@
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+density = ctrl.Antecedent(np.arange(0, 101, 1), 'density')
+urgency = ctrl.Antecedent(np.arange(0, 101, 1), 'urgency')
+load = ctrl.Antecedent(np.arange(0, 101, 1), 'load')
+traffic = ctrl.Antecedent(np.arange(0, 101, 1), 'traffic')
+profit = ctrl.Antecedent(np.arange(0, 101, 1), 'profit')
+
+combine = ctrl.Consequent(np.arange(0, 10, 1), 'combine')
+priority = ctrl.Consequent(np.arange(0, 101, 1), 'priority')
+
+density.automf(3, names=['thap', 'tb', 'cao'])
+urgency.automf(3, names=['thap', 'tb', 'cao'])
+load.automf(3, names=['thap', 'tb', 'cao'])
+traffic.automf(3, names=['thap', 'tb', 'cao'])
+profit.automf(3, names=['thap', 'tb', 'cao'])
+
+combine.automf(3, names=['it', 'mot_vai', 'nhieu'])
+priority.automf(3, names=['thap', 'tb', 'cao'])
+
+rules = [
+    ctrl.Rule(density['cao'] & load['thap'] & traffic['thap'], combine['nhieu']),
+    ctrl.Rule(density['tb'] & traffic['cao'] & urgency['tb'], combine['mot_vai']),
+    ctrl.Rule(load['cao'] & density['cao'] & profit['tb'], combine['mot_vai']),
+    ctrl.Rule(density['thap'] & urgency['cao'] & traffic['tb'], combine['mot_vai']),
+    ctrl.Rule(profit['cao'] & urgency['cao'] & traffic['cao'], combine['mot_vai']),
+    ctrl.Rule(urgency['cao'] & profit['cao'], priority['cao']),
+    ctrl.Rule(urgency['tb'] & traffic['tb'], priority['tb']),
+    ctrl.Rule(urgency['thap'] & density['cao'] & profit['thap'], priority['thap'])
+]
+
+system = ctrl.ControlSystem(rules)
+sim = ctrl.ControlSystemSimulation(system)
+
+sim.input['density'] = 80
+sim.input['urgency'] = 50
+sim.input['load'] = 20
+sim.input['traffic'] = 50
+sim.input['profit'] = 50
+
+sim.compute()
+print(f"So don ket hop: {sim.output['combine']:.2f}")
+print(f"Muc do uu tien: {sim.output['priority']:.2f}")
