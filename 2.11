@@ -1,0 +1,78 @@
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+distance = ctrl.Antecedent(np.arange(0, 51, 1), 'distance')
+traffic = ctrl.Antecedent(np.arange(0, 101, 1), 'traffic')
+demand = ctrl.Antecedent(np.arange(0, 101, 1), 'demand')
+weather = ctrl.Antecedent(np.arange(0, 11, 1), 'weather')
+rating = ctrl.Antecedent(np.arange(1.0, 5.1, 0.1), 'rating')
+punctual = ctrl.Antecedent(np.arange(0, 101, 1), 'punctual')
+
+price = ctrl.Consequent(np.arange(0, 101, 1), 'price')
+bonus = ctrl.Consequent(np.arange(0, 101, 1), 'bonus')
+
+distance['ngan'] = fuzz.trapmf(distance.universe, [0, 0, 2, 3])
+distance['tb'] = fuzz.trapmf(distance.universe, [2, 4, 6, 8])
+distance['dai'] = fuzz.trapmf(distance.universe, [6, 10, 15, 20])
+distance['rat_xa'] = fuzz.trapmf(distance.universe, [15, 25, 50, 50])
+
+traffic['thap'] = fuzz.trapmf(traffic.universe, [0, 0, 20, 30])
+traffic['tb'] = fuzz.trapmf(traffic.universe, [20, 40, 50, 70])
+traffic['cao'] = fuzz.trapmf(traffic.universe, [60, 80, 100, 100])
+
+demand['thap'] = fuzz.trapmf(demand.universe, [0, 0, 20, 30])
+demand['tb'] = fuzz.trapmf(demand.universe, [20, 40, 50, 70])
+demand['cao'] = fuzz.trapmf(demand.universe, [60, 80, 100, 100])
+
+weather['tot'] = fuzz.trimf(weather.universe, [0, 0, 4])
+weather['tb'] = fuzz.trimf(weather.universe, [3, 5, 7])
+weather['xau'] = fuzz.trapmf(weather.universe, [6, 8, 10, 10])
+
+rating['kem'] = fuzz.trapmf(rating.universe, [1.0, 1.0, 2.0, 2.5])
+rating['tb'] = fuzz.trapmf(rating.universe, [2.0, 3.0, 3.5, 4.0])
+rating['tot'] = fuzz.trapmf(rating.universe, [3.5, 4.2, 5.0, 5.0])
+
+punctual['tre'] = fuzz.trapmf(punctual.universe, [0, 0, 40, 50])
+punctual['dung_gio'] = fuzz.trapmf(punctual.universe, [40, 60, 70, 80])
+punctual['som'] = fuzz.trapmf(punctual.universe, [70, 80, 100, 100])
+
+price.automf(4, names=['thap', 'tb', 'cao', 'rat_cao'])
+bonus.automf(4, names=['khong_co', 'it', 'tb', 'cao'])
+
+rules = [
+    ctrl.Rule(distance['ngan'] & traffic['thap'] & demand['thap'], price['thap']),
+    ctrl.Rule(distance['ngan'] & traffic['tb'] & demand['cao'], price['tb']),
+    ctrl.Rule(distance['tb'] & traffic['cao'] & demand['cao'], price['cao']),
+    ctrl.Rule(distance['dai'] & traffic['tb'] & weather['tot'], price['tb']),
+    ctrl.Rule(distance['dai'] & traffic['cao'] & weather['xau'], price['rat_cao']),
+    ctrl.Rule(distance['rat_xa'] & traffic['cao'] & demand['cao'], price['rat_cao']),
+    ctrl.Rule(distance['tb'] & traffic['thap'] & demand['thap'], price['tb']),
+    ctrl.Rule(distance['ngan'] & traffic['cao'] & demand['cao'], price['tb']),
+    ctrl.Rule(distance['rat_xa'] & weather['xau'], price['rat_cao']),
+    ctrl.Rule(distance['tb'] & traffic['tb'] & weather['tb'], price['tb']),
+    ctrl.Rule(rating['tot'] & punctual['som'], bonus['cao']),
+    ctrl.Rule(rating['tb'] & punctual['dung_gio'], bonus['tb']),
+    ctrl.Rule(rating['kem'] & punctual['tre'], bonus['khong_co']),
+    ctrl.Rule(distance['dai'] & traffic['cao'] & punctual['dung_gio'], bonus['cao']),
+    ctrl.Rule(distance['tb'] & traffic['tb'] & rating['tot'], bonus['tb']),
+    ctrl.Rule(rating['kem'] & punctual['tre'], bonus['khong_co']),
+    ctrl.Rule(distance['rat_xa'] & weather['xau'] & rating['tot'], bonus['cao']),
+    ctrl.Rule(distance['ngan'] & rating['tb'] & punctual['dung_gio'], bonus['it']),
+    ctrl.Rule(distance['dai'] & traffic['cao'] & punctual['tre'], bonus['it']),
+    ctrl.Rule(distance['tb'] & weather['tb'] & rating['tot'], bonus['tb'])
+]
+
+system = ctrl.ControlSystem(rules)
+sim = ctrl.ControlSystemSimulation(system)
+
+sim.input['distance'] = 5 
+sim.input['traffic'] = 30
+sim.input['demand'] = 40
+sim.input['weather'] = 8
+sim.input['rating'] = 4.5
+sim.input['punctual'] = 75
+
+sim.compute()
+print(f"Gia xe: {sim.output['price']:.2f}")
+print(f"Diem thuong: {sim.output['bonus']:.2f}")
